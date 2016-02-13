@@ -1,19 +1,18 @@
 package com.kiwoong.cmssign;
 
-import java.io.File;
-
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.speech.RecognizerIntent;
+import android.os.Handler;
+import android.os.Looper;
 import android.telephony.TelephonyManager;
 import android.webkit.JavascriptInterface;
-import android.webkit.WebView;
-import android.webkit.WebViewClient;
 import android.widget.Toast;
+
+import java.io.File;
 
 /**
  * WebViewInterface.java
@@ -184,6 +183,24 @@ public class WebViewInterface {
 		@JavascriptInterface
 		public File send(String key, String fileParam, String uploadPath) {
 			WebViewImageUploadHelper.getInstance(mContext, mAppView).send(key,fileParam,uploadPath);
+			return null;
+		}
+		/**
+		 */
+		@JavascriptInterface
+		public File exit() {
+			//mContext.finish();
+			//System.exit(0);
+			Handler h = new Handler(Looper.getMainLooper());
+			h.post(new Runnable() {
+				@Override
+				public void run() {
+					BackPressCloseHandler backPressCloseHandler = new BackPressCloseHandler(mContext);
+					backPressCloseHandler.onBackPressed();
+				}
+			});
+
+
 			return null;
 		}
 }
