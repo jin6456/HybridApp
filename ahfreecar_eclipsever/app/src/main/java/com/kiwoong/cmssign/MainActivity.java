@@ -19,26 +19,13 @@ import com.google.android.gcm.GCMRegistrar;
 public class MainActivity extends Activity implements AdvancedWebView.Listener {
 	private boolean isInitialized = false;
 	private WebViewInterface mWebViewInterface;
-    public AdvancedWebView mWebView;
+    private AdvancedWebView mWebView;
     private BackPressCloseHandler backPressCloseHandler;
 	private Runnable mRunnable;
 	private Handler mHandler;
 	private RelativeLayout mContainer;
 	private Context mContext;
 	private AdvancedWebView mWebviewPop;
-    static MainActivity instance =null;
-    String url="";
-
-    @Override
-    protected void onRestart() {
-        super.onRestart();
-             Log.e("1111", "11111");
-            url = new PrefUtil(mContext).getPrefDataString("url",HttpConnect.HOST);
-	        mWebView.loadUrl(url);
-            url=null;
-   	        new PrefUtil(mContext).removePref();
-            mWebView.reload(); // 현재 웹뷰 새로고침
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +39,6 @@ public class MainActivity extends Activity implements AdvancedWebView.Listener {
 		mWebView.addJavascriptInterface(mWebViewInterface, "Android");
 		mContainer = (RelativeLayout) findViewById(R.id.mContainer);
 		mContext=this.getApplicationContext();
-        instance=this;
 		//}
      
         
@@ -62,10 +48,13 @@ public class MainActivity extends Activity implements AdvancedWebView.Listener {
 //		mWebView.clearCache(true);
 //		mWebView.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
 		//String url = new PrefUtil(mContext).getPrefDataString("url",HttpConnect.HOST);
-        url = new PrefUtil(mContext).getPrefDataString("url",HttpConnect.HOST);
-        mWebView.loadUrl(url);
-        url=null;
-        new PrefUtil(mContext).removePref();
+        if( getIntent().hasExtra("mode") && getIntent().hasExtra("url") ) {
+            Log.e("MainActivity", "mode : "+getIntent().getStringExtra("mode")+ " & url : "+getIntent().getStringExtra("url"));
+            mWebView.loadUrl(getIntent().getStringExtra("url"));
+        }
+        else {
+            mWebView.loadUrl(HttpConnect.HOST);
+        }
         mWebView.setWebViewClient(new WebViewClient() {
 
         	   public void onPageFinished(WebView view, String url) {
@@ -77,7 +66,6 @@ public class MainActivity extends Activity implements AdvancedWebView.Listener {
  			    			GCMRegistrar.checkManifest(mContext);
  			    			GCMRegistrar.register(mContext, GCMIntentService.SENDER_ID);
  			    			CustomLog.e("gcm register - non mb_id");
-
 // 			    			String url = new PrefUtil(mContext).getPrefDataString("url",HttpConnect.HOST);
 // 			    	        mWebView.loadUrl(url);
 // 			    	        new PrefUtil(mContext).removePref("url");
@@ -161,15 +149,19 @@ public class MainActivity extends Activity implements AdvancedWebView.Listener {
 //    }
 
     @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+
+        if( mWebView != null && intent.hasExtra("mode") && intent.hasExtra("url") ) {
+            Log.e("SDF", "mode : "+getIntent().getStringExtra("mode")+ " & url : "+getIntent().getStringExtra("url"));
+            mWebView.loadUrl(intent.getStringExtra("url"));
+        }
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         mWebView.onResume();
-        Log.e("2222", "2222");
-        url = new PrefUtil(mContext).getPrefDataString("url",HttpConnect.HOST);
-        mWebView.loadUrl(url);
-        url=null;
-        new PrefUtil(mContext).removePref();
-        mWebView.reload(); // 현재 웹뷰 새로고침
         // ...
     }
 
