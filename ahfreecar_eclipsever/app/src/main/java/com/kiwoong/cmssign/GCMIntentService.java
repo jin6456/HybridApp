@@ -10,14 +10,10 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
 import android.support.v4.app.NotificationCompat;
-import android.util.Log;
 
 import com.google.android.gcm.GCMBaseIntentService;
 import com.loopj.android.http.RequestParams;
-
-import org.apache.commons.validator.UrlValidator;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,30 +31,36 @@ public class GCMIntentService extends GCMBaseIntentService {
 	public static final String SENDER_ID = "137466455861" ;
 	public static String token = null;
 	private Bitmap bmBigPicture;
-	private  String pushMessage = "";
 	/**
 	 * Issues a notification to inform the user that server has sent a message.
 	 */
-
 	private  void generateNotification(final Context context, final Intent intent) {
 		final int icon = R.drawable.ic_launcher;
 		// notifies user
 		final NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 		int requestID = (int) System.currentTimeMillis();
-		String title = context.getString(R.string.app_name) ; 
+		String title = context.getString(R.string.app_name) ;
 		CustomLog.e("intent.getExtras() = > "  + intent.getExtras());
 		Bundle bundle  = intent.getExtras() ;
 		//String message = bundlebundle.getString("data");
-
-		String msg = "" , type  =""  , no = "" ,img="";
+		String msg = "" , type  =""  , no = "" ,img="", url = "";
 		try {
 			msg = bundle.getString("message");
-			title = bundle.getString("title"); 
+			title = bundle.getString("title");
 			img =bundle.getString("image");
+			if(intent.hasExtra("url")) {
+				url = bundle.getString("url");
+			}
+//			UrlValidator urlValidator = new UrlValidator();
+//			boolean isUrl = urlValidator.isValid(msg);
+//			if(isUrl){
+//				new PrefUtil(context).setPrefData("url", msg);
+//			}else{
+//				new PrefUtil(context).removePref("url");
+//			}
+		//	bmBigPicture =
 
-		//	bmBigPicture =  
-					
-			
+
 //			ImageView imgView= new ImageView(context);
 //			ImageLoad.imageLoad(context,img, imgView);
 //			imgView.buildDrawingCache();
@@ -77,25 +79,44 @@ public class GCMIntentService extends GCMBaseIntentService {
 			if ( CustomLog.isDebug)	e.printStackTrace();
 		}
 		Intent notificationIntent  = new Intent(context, MainActivity.class);
-		Bundle agrs = new Bundle();
-		UrlValidator urlValidator = new UrlValidator();
-		boolean isUrl = urlValidator.isValid(msg);
-		//Log.i("msg==>", msg);
-		if(isUrl){
-			new PrefUtil(context).setPrefData("url", msg);
-//			if(MainActivity.instance != null ){
-//				pushMessage = msg;//"messageContainsUrl";
-//				handlePushMessage(pushMessage);
-//			}
-		}else{
-			new PrefUtil(context).removePref("url");
-		}
+//		Bundle agrs = new Bundle();
+//		//조회
+//		if ( type.equalsIgnoreCase("inquiry"))
+//		{
+//			agrs.putInt("type", 5);
+//		}
+//		//접수
+//		else 	if ( type.equalsIgnoreCase("apply"))
+//		{
+//			agrs.putInt("type", 4);
+//		}
+//		//1:1 문의
+//		else 	if ( type.equalsIgnoreCase("board"))
+//		{
+//			agrs.putInt("type", 6);
+//			agrs.putString("no", no);
+//		}
+//
+//		notificationIntent.putExtras(agrs);
 
-		notificationIntent.putExtras(agrs);
+		if(!url.equals("")) {
+			notificationIntent.putExtra("mode", "SETPUSHURL");
+			notificationIntent.putExtra("url", url);
+		}
 		notificationIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 		final PendingIntent pending_intent = PendingIntent.getActivity(context, requestID, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+	//	final NotificationCompat.Builder builder = new NotificationCompat.Builder(context);
 
-//		
+//		final Notification notification = builder.setContentIntent(pending_intent)
+//			.setSmallIcon(icon).setTicker(title)
+//			.setWhen(System.currentTimeMillis()).setAutoCancel(true)
+//			.setLargeIcon(bmBigPicture)
+//			.setContentTitle(title).setContentText(msg).
+//			setStyle(new NotificationCompat.BigTextStyle().bigText(msg).setSummaryText("더보기")).build();
+//		notification.defaults |= Notification.DEFAULT_SOUND;
+//		notification.defaults |= Notification.DEFAULT_VIBRATE;
+//		notificationManager.notify(requestID, notification);
+//
 		final NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
 		.setSmallIcon(icon).setTicker(title)
 		.setWhen(System.currentTimeMillis()).setAutoCancel(true)
@@ -114,59 +135,36 @@ public class GCMIntentService extends GCMBaseIntentService {
 			bigPictureStyle.bigPicture(bmBigPicture)
 			.setBigContentTitle(title )
 			.setSummaryText(msg );
-			
+
 			builder.setContentIntent(pending_intent);
-			
-			
+
+
 			NotificationManager mNotificationManager =
 			    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 			// mId allows you to update the notification later on.
 			mNotificationManager.notify(requestID, bigPictureStyle.build());
 		}else{
 			builder.setContentIntent(pending_intent);
-			
-			
+
+
 			NotificationManager mNotificationManager =
 			    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
 			// mId allows you to update the notification later on.
 			mNotificationManager.notify(requestID, builder.build());
 		}
 
-		
-	
-		
-		
-		
+
+
+
+
+
 		context.sendBroadcast(new Intent("com.google.android.intent.action.GTALK_HEARTBEAT"));
 		context.sendBroadcast(new Intent("com.google.android.intent.action.MCS_HEARTBEAT"));
 
 	}
 
+	private  String pushMessage = "";
 
-
-	private void handlePushMessage(String pushMsg){
-		Message msgObj = gcmCommandHandler.obtainMessage();
-		Bundle bundle = new Bundle();
-		bundle.putString("pushMsg",pushMsg);
-		msgObj.setData(bundle);
-
-		gcmCommandHandler.sendMessage(msgObj);
-	}
-
-	private Handler gcmCommandHandler = new Handler() {
-		// Create handleMessage function
-		public void handleMessage(Message message) {
-			if (pushMessage != null && pushMessage.length() > 0) {
-
-					Bundle bundle = new Bundle();
-					bundle =	message.getData();
-				    String url = bundle.getString("pushMsg");
-						Log.i("url==>",url);
-					MainActivity.instance.mWebView.loadUrl(url);
-
-			}
-		}
-	};
 
 
 
@@ -218,8 +216,8 @@ public class GCMIntentService extends GCMBaseIntentService {
 				}
 				params.put("push_token",  token);
 				params.put("device_id",  DeviceUtil.getDeviceId(context));
-				
-				
+
+
 				connect.onConnect("/api_register_token.php", params, 	new OnConnectHttp() {
 
 					@Override
@@ -238,9 +236,9 @@ public class GCMIntentService extends GCMBaseIntentService {
 					public void onConnectFinesh() {
 						// TODO Auto-generated method stub
 						CustomLog.e("push 통신 종료");
-						
+
 					}
-					
+
 				});
 			}
 		});
