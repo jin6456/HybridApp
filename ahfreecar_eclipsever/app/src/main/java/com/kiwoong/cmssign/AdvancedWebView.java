@@ -96,6 +96,7 @@ public class AdvancedWebView extends WebView  {
 	}
 	private WebViewInterface mWebViewInterface;
 	private final static int FILECHOOSER_RESULTCODE = 10001;
+	private final static int LOLLIPOP_FILE_CHOOSE_CODE = 12349;
 	public File mTempFile;												//openFileChooser를 통해 카메라를 호출했을 때. 저장할 파일 경로.
 	private ValueCallback<Uri> mUploadMessage;							//웹뷰를 통해 파일 업로드를 할때 사용한다.
 	public static final String PACKAGE_NAME_DOWNLOAD_MANAGER = "com.android.providers.downloads";
@@ -113,6 +114,8 @@ public class AdvancedWebView extends WebView  {
 	protected ValueCallback<Uri> mFileUploadCallbackFirst;
 	/** File upload callback for Android 5.0+ */
 	protected ValueCallback<Uri[]> mFileUploadCallbackSecond;
+
+	protected ValueCallback<Uri[]> mFilePathCallback;
 	protected long mLastError;
 	protected String mLanguageIso3;
 	protected int mRequestCodeFilePicker = REQUEST_CODE_FILE_PICKER;
@@ -261,67 +264,77 @@ public class AdvancedWebView extends WebView  {
 	}
 
 	public void onActivityResult(final int requestCode, final int resultCode, final Intent intent) {
-		
-		if (resultCode == Activity.RESULT_OK) {
+		Log.e("AdvancedWebView", "onActivityResult requestCode : "+requestCode+" & resultCode : "+resultCode);
+		if( resultCode == Activity.RESULT_CANCELED && requestCode == LOLLIPOP_FILE_CHOOSE_CODE) {
+			mFilePathCallback.onReceiveValue(null);
+			mFilePathCallback = null;
+		}
+		else if (resultCode == Activity.RESULT_OK) {
 			//Log.e("VERSION",android.os.Build.VERSION.SDK_INT+"");
 			//if(android.os.Build.VERSION.SDK_INT >= 19){
-				
+			if (requestCode == LOLLIPOP_FILE_CHOOSE_CODE) {
+				if (mFilePathCallback == null) {
+					Log.e("AdvancedWebView", "mFilePathCallback is NULL");
+					return;
+				}
+				mFilePathCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, intent));
+				mFilePathCallback = null;
+				Log.e("AdvancedWebView", "onReceiveValue");
+			}
+			else {
 				if (requestCode == FILECHOOSER_RESULTCODE) { //파일 선택.
 					if (null == mUploadMessage)
 						return;
 					Uri result = intent == null || resultCode != Activity.RESULT_OK ? null : intent.getData();
-					
-					if ( mTempFile.exists() ) {
-						
+
+					if (mTempFile.exists()) {
+
 						mUploadMessage.onReceiveValue(Uri.fromFile(mTempFile));
 						mUploadMessage = null;
-						
+
 					} else {
-						
+
 						mUploadMessage.onReceiveValue(result);
 						mUploadMessage = null;
 					}
-					
-					return;
-				} else if ( requestCode == WebViewImageUploadHelper.KITKAT_FILECHOOSER ) { //킷캣.
-					Uri result = intent == null || resultCode != Activity.RESULT_OK ? null : intent.getData();
-					Log.e("result",result.toString());
-					WebViewImageUploadHelper.getInstance(mContext, (AdvancedWebView)mActivity.get().findViewById(R.id.webview)).updateContent(result);
-					return;
-				} else if ( requestCode == WebViewImageUploadHelper.KITKAT_CAMERA) { //킷캣 카메라.
-					WebViewImageUploadHelper.getInstance(mContext, (AdvancedWebView)mActivity.get().findViewById(R.id.webview)).updateContent();
-			
-					
-				}
-			//}
-			if (requestCode == mRequestCodeFilePicker) {
-				if (intent != null) {
-					if (mFileUploadCallbackFirst != null) {
-						mFileUploadCallbackFirst.onReceiveValue(intent.getData());
-						mFileUploadCallbackFirst = null;
-					}
-					else if (mFileUploadCallbackSecond != null) {
-						Uri[] dataUris;
-						try {
-							dataUris = new Uri[] { Uri.parse(intent.getDataString()) };
-						}
-						catch (Exception e) {
-							dataUris = null;
-						}
 
-						mFileUploadCallbackSecond.onReceiveValue(dataUris);
+					return;
+				} else if (requestCode == WebViewImageUploadHelper.KITKAT_FILECHOOSER) { //킷캣.
+					Uri result = intent == null || resultCode != Activity.RESULT_OK ? null : intent.getData();
+					Log.e("result", result.toString());
+					WebViewImageUploadHelper.getInstance(mContext, (AdvancedWebView) mActivity.get().findViewById(R.id.webview)).updateContent(result);
+					return;
+				} else if (requestCode == WebViewImageUploadHelper.KITKAT_CAMERA) { //킷캣 카메라.
+					WebViewImageUploadHelper.getInstance(mContext, (AdvancedWebView) mActivity.get().findViewById(R.id.webview)).updateContent();
+
+
+				}
+				//}
+				if (requestCode == mRequestCodeFilePicker) {
+					if (intent != null) {
+						if (mFileUploadCallbackFirst != null) {
+							mFileUploadCallbackFirst.onReceiveValue(intent.getData());
+							mFileUploadCallbackFirst = null;
+						} else if (mFileUploadCallbackSecond != null) {
+							Uri[] dataUris;
+							try {
+								dataUris = new Uri[]{Uri.parse(intent.getDataString())};
+							} catch (Exception e) {
+								dataUris = null;
+							}
+
+							mFileUploadCallbackSecond.onReceiveValue(dataUris);
+							mFileUploadCallbackSecond = null;
+						}
+					}
+				} else {
+					if (mFileUploadCallbackFirst != null) {
+						mFileUploadCallbackFirst.onReceiveValue(null);
+						mFileUploadCallbackFirst = null;
+					} else if (mFileUploadCallbackSecond != null) {
+						mFileUploadCallbackSecond.onReceiveValue(null);
 						mFileUploadCallbackSecond = null;
 					}
-				}
-			}
-			else {
-				if (mFileUploadCallbackFirst != null) {
-					mFileUploadCallbackFirst.onReceiveValue(null);
-					mFileUploadCallbackFirst = null;
-				}
-				else if (mFileUploadCallbackSecond != null) {
-					mFileUploadCallbackSecond.onReceiveValue(null);
-					mFileUploadCallbackSecond = null;
 				}
 			}
 		}
@@ -885,7 +898,24 @@ public class AdvancedWebView extends WebView  {
 			// file upload callback (Android 5.0 (API level 21) -- current) (public method)
 			@SuppressWarnings("all")
 			public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, WebChromeClient.FileChooserParams fileChooserParams) {
-				openFileInput(null, filePathCallback);
+				Log.e("AdvancedWebView", "onShowFileChooser START");
+				//openFileInput(null, filePathCallback);
+
+				if(mFilePathCallback != null) {
+					mFilePathCallback.onReceiveValue(null);
+				}
+				mFilePathCallback = filePathCallback;
+				Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+				i.addCategory(Intent.CATEGORY_OPENABLE);
+				i.setType("image/*");
+				//((MainActivity)context).startActivityForResult(Intent.createChooser(i, "File Chooser"), LOLLIPOP_FILE_CHOOSE_CODE);
+				if (mFragment != null && mFragment.get() != null && Build.VERSION.SDK_INT >= 11) {
+					mFragment.get().startActivityForResult(Intent.createChooser(i, "File Chooser"), LOLLIPOP_FILE_CHOOSE_CODE);
+				}
+				else if (mActivity != null && mActivity.get() != null) {
+					mActivity.get().startActivityForResult(Intent.createChooser(i, "File Chooser"), LOLLIPOP_FILE_CHOOSE_CODE);
+				}
+
 				return true;
 			}
 
